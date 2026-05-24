@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Install Meson
+        run: pipx install meson
+
+      - name: Build Picolibc
+        run: |
+          meson setup --prefix / --cross-file cross.txt picolibc-build picolibc
+          meson compile -C picolibc-build
+          meson install -C picolibc-build --destdir ../picolibc-install
+
+      - name: Build .elf
+        run: zig build -Doptimize=ReleaseSmall
