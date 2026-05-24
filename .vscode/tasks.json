@@ -1,0 +1,24 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build (Debug)",
+            "type": "process",
+            "command": "zig",
+            "args": ["build"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Build (Release)",
+            "type": "process",
+            "command": "zig",
+            "args": ["build", "-Doptimize=ReleaseSmall"],
+            "group": {
+                "kind": "build"
+            }
+        }
+    ]
+}

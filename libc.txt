@@ -1,0 +1,6 @@
+include_dir=./picolibc-install/include
+sys_include_dir=./picolibc-install/include
+crt_dir=./picolibc-install/lib
+msvc_lib_dir=
+kernel32_lib_dir=
+gcc_dir=

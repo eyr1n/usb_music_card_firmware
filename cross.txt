@@ -1,0 +1,9 @@
+[binaries]
+c = ['zig', 'cc', '-target', 'thumb-freestanding-eabihf', '-mcpu=cortex_m4', '-mfpu=fpv4-sp-d16', '-mfloat-abi=hard']
+ar = ['zig', 'ar']
+
+[host_machine]
+system = 'none'
+cpu_family = 'arm'
+cpu = 'arm'
+endian = 'little'
