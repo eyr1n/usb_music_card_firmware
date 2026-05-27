@@ -1,22 +1,22 @@
-const st = @import("stm32cubemx");
+const mx = @import("stm32cubemx");
 
 const Gpio = @import("Gpio.zig");
 
-const a: Gpio = .{ .port = st.DIGIT_A_GPIO_Port, .pin = st.DIGIT_A_Pin };
-const b: Gpio = .{ .port = st.DIGIT_B_GPIO_Port, .pin = st.DIGIT_B_Pin };
-const c: Gpio = .{ .port = st.DIGIT_C_GPIO_Port, .pin = st.DIGIT_C_Pin };
-const d: Gpio = .{ .port = st.DIGIT_D_GPIO_Port, .pin = st.DIGIT_D_Pin };
-const e: Gpio = .{ .port = st.DIGIT_E_GPIO_Port, .pin = st.DIGIT_E_Pin };
-const f: Gpio = .{ .port = st.DIGIT_F_GPIO_Port, .pin = st.DIGIT_F_Pin };
-const g: Gpio = .{ .port = st.DIGIT_G_GPIO_Port, .pin = st.DIGIT_G_Pin };
-const dp: Gpio = .{ .port = st.DIGIT_DP_GPIO_Port, .pin = st.DIGIT_DP_Pin };
+const a: Gpio = .{ .port = mx.DIGIT_A_GPIO_Port, .pin = mx.DIGIT_A_Pin };
+const b: Gpio = .{ .port = mx.DIGIT_B_GPIO_Port, .pin = mx.DIGIT_B_Pin };
+const c: Gpio = .{ .port = mx.DIGIT_C_GPIO_Port, .pin = mx.DIGIT_C_Pin };
+const d: Gpio = .{ .port = mx.DIGIT_D_GPIO_Port, .pin = mx.DIGIT_D_Pin };
+const e: Gpio = .{ .port = mx.DIGIT_E_GPIO_Port, .pin = mx.DIGIT_E_Pin };
+const f: Gpio = .{ .port = mx.DIGIT_F_GPIO_Port, .pin = mx.DIGIT_F_Pin };
+const g: Gpio = .{ .port = mx.DIGIT_G_GPIO_Port, .pin = mx.DIGIT_G_Pin };
+const dp: Gpio = .{ .port = mx.DIGIT_DP_GPIO_Port, .pin = mx.DIGIT_DP_Pin };
 
-var digit: u32 = 0;
+var track_prev: ?usize = null;
 
-pub fn setDigit(next: u32) void {
-    if (next == digit) return;
+pub fn setTrack(track: usize) void {
+    if (track == track_prev) return;
 
-    switch (next % 10) {
+    switch (track % 10) {
         0 => {
             a.write(.high);
             b.write(.high);
@@ -110,7 +110,6 @@ pub fn setDigit(next: u32) void {
         else => unreachable,
     }
 
-    dp.write(if (next >= 10) .high else .low);
-
-    digit = next;
+    dp.write(if (track >= 10) .high else .low);
+    track_prev = track;
 }

@@ -1,4 +1,4 @@
-const st = @import("stm32cubemx");
+const mx = @import("stm32cubemx");
 
 const Gpio = @import("Gpio.zig");
 
@@ -9,53 +9,28 @@ pub const Event = enum {
     volume,
 };
 
-const interval_ms: u32 = 50;
-
-const play_pause_button: Gpio = .{ .port = st.PLAY_PAUSE_GPIO_Port, .pin = st.PLAY_PAUSE_Pin };
-const next_track_button: Gpio = .{ .port = st.NEXT_TRACK_GPIO_Port, .pin = st.NEXT_TRACK_Pin };
-const volume_button: Gpio = .{ .port = st.VOLUME_GPIO_Port, .pin = st.VOLUME_Pin };
+const play_pause_button: Gpio = .{ .port = mx.PLAY_PAUSE_GPIO_Port, .pin = mx.PLAY_PAUSE_Pin };
+const next_track_button: Gpio = .{ .port = mx.NEXT_TRACK_GPIO_Port, .pin = mx.NEXT_TRACK_Pin };
+const volume_button: Gpio = .{ .port = mx.VOLUME_GPIO_Port, .pin = mx.VOLUME_Pin };
 
 var last_tick_ms: u32 = 0;
-var pending_event: Event = .none;
-
-var play_pause_state_prev: Gpio.State = .high;
-var next_track_state_prev: Gpio.State = .high;
-var volume_state_prev: Gpio.State = .high;
+var play_pause_prev: Gpio.State = .high;
+var next_track_prev: Gpio.State = .high;
+var volume_prev: Gpio.State = .high;
 
 pub fn getEvent() Event {
-    const now_ms = st.HAL_GetTick();
-    if (now_ms -% last_tick_ms >= interval_ms) {
-        last_tick_ms = now_ms;
-        processPlayPauseButton();
-        processNextTrackButton();
-        processVolumeButton();
-    }
+    const now_ms = mx.HAL_GetTick();
+    if (now_ms -% last_tick_ms < 50) return .none;
+    last_tick_ms = now_ms;
 
-    const event = pending_event;
-    pending_event = .none;
-    return event;
+    if (isPressed(play_pause_button, &play_pause_prev)) return .play_pause;
+    if (isPressed(next_track_button, &next_track_prev)) return .next_track;
+    if (isPressed(volume_button, &volume_prev)) return .volume;
+    return .none;
 }
 
-fn processPlayPauseButton() void {
-    const state = play_pause_button.read();
-    if (state != play_pause_state_prev) {
-        if (state == .low) pending_event = .play_pause;
-        play_pause_state_prev = state;
-    }
-}
-
-fn processNextTrackButton() void {
-    const state = next_track_button.read();
-    if (state != next_track_state_prev) {
-        if (state == .low) pending_event = .next_track;
-        next_track_state_prev = state;
-    }
-}
-
-fn processVolumeButton() void {
-    const state = volume_button.read();
-    if (state != volume_state_prev) {
-        if (state == .low) pending_event = .volume;
-        volume_state_prev = state;
-    }
+fn isPressed(button: Gpio, prev: *Gpio.State) bool {
+    const state = button.read();
+    defer prev.* = state;
+    return state == .low and prev.* == .high;
 }
