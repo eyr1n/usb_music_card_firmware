@@ -9,8 +9,6 @@ const wm8731 = @import("wm8731.zig");
 
 extern var Appli_state: mx.ApplicationTypeDef;
 
-const Error = error{MountFailed};
-
 const State = enum {
     stopped,
     paused,
@@ -29,7 +27,7 @@ pub fn entry() !void {
     }
 
     const usbh_path = std.mem.sliceTo(@as([*:0]const u8, @ptrCast(&mx.USBHPath)), 0);
-    if (mx.f_mount(&mx.USBHFatFS, usbh_path.ptr, 1) != mx.FR_OK) return Error.MountFailed;
+    if (mx.f_mount(&mx.USBHFatFS, usbh_path.ptr, 1) != mx.FR_OK) return error.InitFailed;
     try wav.init(usbh_path);
     try wm8731.init();
     try i2s.init();
