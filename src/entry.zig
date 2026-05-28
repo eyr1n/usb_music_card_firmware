@@ -39,22 +39,36 @@ pub fn entry() !void {
             .none => {},
             .play_pause => switch (state) {
                 .stopped => playTrack(track_index),
-                .paused => state = .playing,
-                .playing => state = .paused,
+                .paused => {
+                    state = .playing;
+                    i2s.resumeQueue();
+                },
+                .playing => {
+                    state = .paused;
+                    i2s.pauseQueue();
+                },
             },
             .next_track => switch (state) {
                 .stopped => playTrack(track_index),
-                .paused, .playing => playTrack(track_index + 1),
+                .paused => {
+                    playTrack(track_index + 1);
+                    i2s.resumeQueue();
+                },
+                .playing => playTrack(track_index + 1),
             },
             .volume => volume_index = (volume_index + 1) % volume_levels_db.len,
         }
 
         if (state == .playing) {
             if (wav.isEof()) {
-                playTrack(track_index + 1);
-            } else if (i2s.reserve()) |buffer| {
-                try wav.read(buffer);
-                i2s.commit();
+                if (i2s.isEmpty()) {
+                    playTrack(track_index + 1);
+                }
+            } else {
+                if (i2s.reserve()) |buffer| {
+                    try wav.read(buffer);
+                    i2s.commit();
+                }
             }
         }
 
@@ -66,6 +80,8 @@ pub fn entry() !void {
 }
 
 fn playTrack(index: usize) void {
+    i2s.flushQueue();
+
     var i = index;
     while (true) : (i += 1) {
         wav.open(i) catch |err| switch (err) {

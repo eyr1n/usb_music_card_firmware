@@ -10,8 +10,8 @@ pub const Error = error{
     ReadFailed,
 } || std.mem.Allocator.Error;
 
-var file: mx.FIL = std.mem.zeroes(mx.FIL);
-var drwav: mx.drwav = std.mem.zeroes(mx.drwav);
+var file = std.mem.zeroes(mx.FIL);
+var drwav = std.mem.zeroes(mx.drwav);
 
 var fba_buffer: [1024]u8 = undefined;
 var fba: std.heap.FixedBufferAllocator = .init(&fba_buffer);
