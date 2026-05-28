@@ -61,13 +61,13 @@ pub fn entry() !void {
 
         if (state == .playing) {
             if (wav.isEof()) {
-                if (i2s.isEmpty()) {
+                if (i2s.isQueueEmpty()) {
                     playTrack(track_index + 1);
                 }
             } else {
-                if (i2s.reserve()) |buffer| {
+                if (i2s.reserveQueue()) |buffer| {
                     try wav.read(buffer);
-                    i2s.commit();
+                    i2s.commitQueue();
                 }
             }
         }

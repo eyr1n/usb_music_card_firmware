@@ -16,7 +16,8 @@ var dma_buffer = std.mem.zeroes([frames_per_buffer * channels * 2]u16);
 var queue_buffer = std.mem.zeroes([queue_depth + 1][frames_per_buffer * channels]u16);
 var read_index: usize = 0;
 var write_index: usize = 0;
-var queue_paused: bool = false;
+var flush_queue: bool = false;
+var pause_queue: bool = false;
 
 pub fn init() Error!void {
     if (mx.HAL_I2S_Transmit_DMA(&hi2s1, &dma_buffer, @intCast(dma_buffer.len)) != mx.HAL_OK) {
@@ -24,32 +25,36 @@ pub fn init() Error!void {
     }
 }
 
-pub fn reserve() ?[]u16 {
+pub fn reserveQueue() ?[]u16 {
+    if (@atomicLoad(bool, &flush_queue, .acquire)) return null;
     const read = @atomicLoad(usize, &read_index, .acquire);
     const write = @atomicLoad(usize, &write_index, .acquire);
     if ((write + 1) % queue_buffer.len == read) return null;
     return &queue_buffer[write];
 }
 
-pub fn commit() void {
+pub fn commitQueue() void {
     const write = @atomicLoad(usize, &write_index, .acquire);
     @atomicStore(usize, &write_index, (write + 1) % queue_buffer.len, .release);
 }
 
+pub fn flushQueue() void {
+    if (isQueueEmpty()) return;
+    @atomicStore(bool, &flush_queue, true, .release);
+}
+
 pub fn pauseQueue() void {
-    @atomicStore(bool, &queue_paused, true, .release);
+    @atomicStore(bool, &pause_queue, true, .release);
 }
 
 pub fn resumeQueue() void {
-    @atomicStore(bool, &queue_paused, false, .release);
+    @atomicStore(bool, &pause_queue, false, .release);
 }
 
-pub fn flushQueue() void {
-    @atomicStore(usize, &write_index, @atomicLoad(usize, &read_index, .acquire), .release);
-}
-
-pub fn isEmpty() bool {
-    return @atomicLoad(usize, &read_index, .acquire) == @atomicLoad(usize, &write_index, .acquire);
+pub fn isQueueEmpty() bool {
+    const read = @atomicLoad(usize, &read_index, .acquire);
+    const write = @atomicLoad(usize, &write_index, .acquire);
+    return read == write;
 }
 
 export fn HAL_I2S_TxHalfCpltCallback(hi2s: [*c]mx.I2S_HandleTypeDef) void {
@@ -65,9 +70,21 @@ export fn HAL_I2S_TxCpltCallback(hi2s: [*c]mx.I2S_HandleTypeDef) void {
 }
 
 fn fillDmaBuffer(buffer: []u16) void {
+    if (@atomicRmw(bool, &flush_queue, .Xchg, false, .acq_rel)) {
+        const write = @atomicLoad(usize, &write_index, .acquire);
+        @atomicStore(usize, &read_index, write, .release);
+        @memset(buffer, 0);
+        return;
+    }
+
+    if (@atomicLoad(bool, &pause_queue, .acquire)) {
+        @memset(buffer, 0);
+        return;
+    }
+
     const read = @atomicLoad(usize, &read_index, .acquire);
     const write = @atomicLoad(usize, &write_index, .acquire);
-    if (@atomicLoad(bool, &queue_paused, .acquire) or read == write) {
+    if (read == write) {
         @memset(buffer, 0);
         return;
     }
